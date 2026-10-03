@@ -48,3 +48,8 @@ Si se cambian los identificadores de obra o las emociones, actualizar también `
 
 Solo se guarda la obra, la emoción y la fecha del voto. No se piden cuentas, nombres ni datos del dispositivo,
 y los visitantes no usan ningún servicio de IA con restricción de edad.
+
+## Licencia
+
+El código de este proyecto se distribuye bajo licencia MIT (ver `LICENSE`).
+Las imágenes de las obras del Museo a Cielo Abierto de Casupá pertenecen a sus autores y se incluyen solo con fines educativos, para el 10.º Encuentro Interinstitucional de Robótica Educativa. No están cubiertas por la licencia MIT.
