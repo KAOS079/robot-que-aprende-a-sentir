@@ -13,11 +13,11 @@ y la pantalla del stand muestra lo que el robot "siente" ante cada obra y lo que
 |---|---|
 | `index.html` | Pantalla del stand: obra, emociones aprendidas, predicción sobre la obra sorpresa. |
 | `votar.html` | Página que abre el QR. Ej.: `votar.html?obra=3`. |
-| `config.js` | Obras, emociones, tiempos y conexión. **Es lo único que hay que editar.** |
+| `config.js` | Obras, emociones, tiempos y conexión. |
 | `datos.js` | Guarda y lee los votos (planilla de Google o modo demo). |
 | `modelo.js` | Extrae características de las imágenes (MobileNet o colores) y predice con vecinos más cercanos. |
 | `apps-script/Codigo.gs` | Servidor de votos en Google Apps Script. |
-| `img/` | Fondo del robot y fotos de las obras (las actuales son de ejemplo). |
+| `img/` | Fondo del robot y fotos de las obras. |
 
 ## Cómo funciona el modelo
 
@@ -26,23 +26,6 @@ y la pantalla del stand muestra lo que el robot "siente" ante cada obra y lo que
 2. **Entrenamiento**: cada voto es un ejemplo etiquetado. El robot guarda, para cada obra, sus características y sus etiquetas.
 3. **Predicción**: ante una imagen nueva busca las obras más parecidas y combina sus etiquetas, pesando más las más parecidas
    (*k* vecinos más cercanos ponderados). Es el mismo principio que usa Teachable Machine.
-
-## Probarlo (modo demo)
-
-Con `APPS_SCRIPT_URL` vacío, los votos se guardan en el navegador y se simulan visitantes.
-Abrí `index.html` y, en otra pestaña del mismo navegador, `votar.html`: al votar, la pantalla se actualiza.
-Hay que servirlo desde un servidor web (por ejemplo GitHub Pages o `python3 -m http.server`), no abriendo el archivo con doble clic.
-
-## Ponerlo en línea
-
-1. Subir la carpeta a un repositorio de GitHub y activar **GitHub Pages** (Settings › Pages › rama `main`).
-2. Instalar el servidor de votos siguiendo las instrucciones de `apps-script/Codigo.gs` y pegar la URL en `config.js`.
-3. Generar un QR por obra con la dirección `https://USUARIO.github.io/REPO/votar.html?obra=N`.
-
-## Cambiar las obras
-
-Copiar las fotos a `img/obras/` y editar la lista `OBRAS` y `SORPRESA` en `config.js`.
-Si se cambian los identificadores de obra o las emociones, actualizar también `OBRAS_VALIDAS` y `EMOCIONES_VALIDAS` en `Codigo.gs`.
 
 ## Privacidad
 
