@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="es">
+<title>El robot que aprende a sentir</title>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya:ital,wght@0,700;0,800;1,700&family=Atkinson+Hyperlegible:wght@400;700&family=Atkinson+Hyperlegible+Mono:wght@500;700&display=swap">
+<style>
+/* Pantalla de stand 16:9 que escala al tamaño de la ventana.
+   Robot del fondo a la izquierda, obra y título a la derecha, datos abajo.
+   Un solo aspecto (atardecer de campo) en cualquier tema. */
+:root {
+  color-scheme: dark;
+  --noche: #140d08;          /* fondo fuera del escenario */
+  --panel: rgba(28, 18, 11, 0.74);
+  --crema: #f6ead7;          /* texto principal */
+  --arena: #cdb592;          /* texto secundario */
+  --cobre: #d9874a;          /* acento: el cobre del robot */
+  --linea: rgba(246, 234, 215, 0.18);
+  --f-titulo: "Alegreya", Georgia, "Times New Roman", serif;
+  --f-texto: "Atkinson Hyperlegible", "Segoe UI", Arial, sans-serif;
+  --f-dato: "Atkinson Hyperlegible Mono", ui-monospace, Consolas, monospace;
+}
+html, body { height: 100%; }
+body {
+  margin: 0; background: var(--noche); color: var(--crema);
+  font-family: var(--f-texto);
+  display: grid; place-items: center; overflow: hidden;
+}
+.escenario {
+  position: relative;
+  width: min(100vw, calc(100vh * 16 / 9));
+  aspect-ratio: 16 / 9;
+  max-width: 100%;
+  container-type: size;
+  background: url("img/fondo.jpg") left center / cover no-repeat;
+  overflow: hidden;
+}
+.escenario::after {           /* oscurece la derecha para leer bien */
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(90deg, rgba(20,13,8,0) 30%, rgba(20,13,8,.55) 55%, rgba(20,13,8,.72) 100%);
+}
+.escenario > * { position: absolute; z-index: 1; }
+
+/* ---- Título ---- */
+.titulo { left: 50%; right: 3%; top: 4.5%; }
+.titulo .antetitulo {
+  font-family: var(--f-dato); font-size: 1.15cqw; letter-spacing: .18em; text-transform: uppercase;
+  color: var(--cobre); margin: 0 0 .5cqw;
+}
+.titulo h1 {
+  font-family: var(--f-titulo); font-weight: 800; font-size: 3.6cqw; line-height: 1;
+  margin: 0; text-wrap: balance; text-shadow: 0 .2cqw 1.2cqw rgba(0,0,0,.45);
+}
+
+/* ---- Globo del robot ---- */
+.globo {
+  left: 31%; top: 13%; width: 17.5%;
+  background: var(--crema); color: #24170d;
+  border-radius: 1.4cqw; padding: 1.1cqw 1.3cqw 1.2cqw;
+  box-shadow: 0 .6cqw 2cqw rgba(0,0,0,.35);
+  transition: transform .5s ease;
+}
+.globo::before {             /* colita hacia la mano del robot */
+  content: ""; position: absolute; left: -1.1cqw; bottom: 1.6cqw;
+  border: .8cqw solid transparent; border-right: 1.3cqw solid var(--crema); border-left: 0;
+}
+.globo .quien { font-family: var(--f-dato); font-size: .95cqw; letter-spacing: .12em; text-transform: uppercase; color: #8a5a32; margin: 0 0 .3cqw; }
+.globo .dice { font-family: var(--f-titulo); font-weight: 800; font-size: 2.3cqw; line-height: 1.08; margin: 0; text-wrap: balance; }
+.globo .dice.larga { font-size: 1.6cqw; }
+.globo .nota { font-size: 1cqw; line-height: 1.35; margin: .5cqw 0 0; color: #5b4532; }
+.globo.cambia { transform: scale(.94); }
+
+/* ---- Obra ---- */
+.obra { left: 51%; top: 19%; width: 29%; }
+.marco {
+  aspect-ratio: 4 / 3; max-width: 100%; border: .55cqw solid #3a2617; outline: .18cqw solid var(--cobre);
+  background: #1a120c center / contain no-repeat; box-shadow: 0 1cqw 2.5cqw rgba(0,0,0,.5);
+  transition: opacity .6s ease;
+}
+.marco.saliendo { opacity: 0; }
+.ficha { left: 82%; right: 3%; top: 19%; display: grid; gap: .8cqw; }
+.ficha .tipo {
+  justify-self: start; font-family: var(--f-dato); font-size: .95cqw; letter-spacing: .1em; text-transform: uppercase;
+  padding: .3cqw .7cqw; border: .12cqw solid var(--cobre); color: var(--cobre); border-radius: 10cqw;
+}
+.ficha .tipo.sorpresa { background: var(--cobre); color: #24170d; }
+.ficha h2 { font-family: var(--f-titulo); font-weight: 700; font-style: italic; font-size: 1.9cqw; line-height: 1.1; margin: 0; text-wrap: balance; }
+.ficha .autor { font-size: 1.05cqw; color: var(--arena); margin: 0; }
+.ficha .num { font-family: var(--f-dato); font-size: 1cqw; color: var(--arena); margin: 0; }
+.ficha .parecidos { font-size: 1cqw; line-height: 1.4; color: var(--arena); margin: 0; }
+.ficha .parecidos b { color: var(--crema); font-weight: 700; }
+
+/* ---- Datos ---- */
+.datos {
+  left: 36%; right: 3%; bottom: 4%; top: 63.5%;
+  background: var(--panel); backdrop-filter: blur(.6cqw); -webkit-backdrop-filter: blur(.6cqw);
+  border: .1cqw solid var(--linea); border-radius: 1cqw;
+  padding: 1.3cqw 1.8cqw; display: grid; grid-template-rows: 1fr auto; gap: 1cqw;
+}
+.barras { display: grid; gap: .55cqw; align-content: center; }
+.fila { display: grid; grid-template-columns: 13cqw 1fr 5.5cqw; align-items: center; gap: 1.2cqw; }
+.fila .nombre { font-weight: 700; font-size: 1.5cqw; white-space: nowrap; }
+.pista { height: 1.6cqw; background: rgba(246,234,215,.1); border-radius: .4cqw; overflow: hidden; }
+.relleno { height: 100%; width: 0; border-radius: .4cqw; transition: width .9s cubic-bezier(.2,.8,.2,1); }
+.fila .pct { font-family: var(--f-dato); font-weight: 700; font-size: 1.5cqw; text-align: right; font-variant-numeric: tabular-nums; }
+.fila.gana .nombre::after { content: " ◂ siento"; font-family: var(--f-dato); font-weight: 500; font-size: .9cqw; color: var(--cobre); letter-spacing: .05em; }
+.fila:not(.gana) { opacity: .62; }
+.pie {
+  display: flex; flex-wrap: wrap; justify-content: space-between; gap: .4cqw 1.6cqw;
+  border-top: .1cqw solid var(--linea); padding-top: .8cqw;
+  font-size: 1.05cqw; color: var(--arena);
+}
+.pie b { color: var(--crema); font-family: var(--f-dato); font-variant-numeric: tabular-nums; }
+.pie .vivo::before { content: "●"; color: #7fd18b; margin-right: .4cqw; animation: latido 2s infinite; }
+@keyframes latido { 50% { opacity: .25; } }
+
+/* ---- Aviso de nuevo voto ---- */
+.aviso {
+  right: 3%; top: 57%; font-size: 1.05cqw; background: var(--cobre); color: #24170d;
+  padding: .45cqw 1cqw; border-radius: .5cqw; font-weight: 700;
+  opacity: 0; transform: translateY(.5cqw); transition: opacity .4s, transform .4s;
+}
+.aviso.visible { opacity: 1; transform: none; }
+
+.invitacion { left: 2%; max-width: 32%; bottom: 2.2%; font-size: .95cqw; color: var(--crema); background: rgba(20,13,8,.55); padding: .35cqw .8cqw; border-radius: .4cqw; }
+
+@media (prefers-reduced-motion: reduce) {
+  .relleno, .marco, .globo, .aviso { transition: none; }
+  .pie .vivo::before { animation: none; }
+}
+</style>
+
+<main class="escenario" aria-live="polite">
+  <header class="titulo">
+    <p class="antetitulo">Tierra de leyendas · Casupá</p>
+    <h1>El robot que aprende a sentir</h1>
+  </header>
+
+  <div class="globo" id="globo">
+    <p class="quien">El robot dice</p>
+    <p class="dice" id="dice">Estoy aprendiendo…</p>
+    <p class="nota" id="nota">Cargando lo que votaron en el recorrido.</p>
+  </div>
+
+  <figure class="obra" style="margin:0">
+    <div class="marco" id="marco" role="img" aria-label=""></div>
+  </figure>
+
+  <aside class="ficha">
+    <span class="tipo" id="tipo">Obra del recorrido</span>
+    <h2 id="nombreObra">—</h2>
+    <p class="autor" id="autor"></p>
+    <p class="num" id="num"></p>
+    <p class="parecidos" id="parecidos" hidden></p>
+  </aside>
+
+  <section class="datos" aria-label="Lo que aprendió el robot">
+    <div class="barras" id="barras"></div>
+    <div class="pie">
+      <span class="vivo">Aprendí de <b id="personas">0</b> personas</span>
+      <span>Entrenado con <b id="etiquetas">0</b> etiquetas</span>
+      <span>Cómo veo las imágenes: <b id="motor">…</b></span>
+    </div>
+  </section>
+
+  <div class="aviso" id="aviso"></div>
+  <p class="invitacion">Escaneá el QR de cada obra del recorrido y enseñale al robot qué sentiste.</p>
+</main>
+
+<script src="config.js"></script>
+<script src="datos.js"></script>
+<script src="modelo.js"></script>
+<script>
+(function () {
+  const C = window.CONFIG;
+  const $ = id => document.getElementById(id);
+  let conteos = {};
+  let indice = -1;
+  let vueltas = 0;
+  const secuencia = () => [...C.OBRAS, C.SORPRESA];
+
+  // Barras
+  const filas = {};
+  C.EMOCIONES.forEach(e => {
+    const f = document.createElement("div");
+    f.className = "fila";
+    f.innerHTML = `<span class="nombre">${e.nombre}</span>
+      <div class="pista"><div class="relleno" style="background:${e.color}"></div></div>
+      <span class="pct">0 %</span>`;
+    $("barras").appendChild(f);
+    filas[e.id] = f;
+  });
+
+  function pintarBarras(prob) {
+    let gana = null, max = -1;
+    C.EMOCIONES.forEach(e => { if (prob[e.id] > max) { max = prob[e.id]; gana = e; } });
+    C.EMOCIONES.forEach(e => {
+      const p = Math.round((prob[e.id] || 0) * 100);
+      filas[e.id].querySelector(".relleno").style.width = p + "%";
+      filas[e.id].querySelector(".pct").textContent = p + " %";
+      filas[e.id].classList.toggle("gana", e === gana);
+    });
+    return gana;
+  }
+
+  function decir(texto, nota, larga) {
+    const g = $("globo");
+    g.classList.add("cambia");
+    setTimeout(() => {
+      $("dice").textContent = texto;
+      $("dice").classList.toggle("larga", !!larga);
+      $("nota").textContent = nota || "";
+      $("nota").hidden = !nota;
+      g.classList.remove("cambia");
+    }, 250);
+  }
+
+  function totales() {
+    let t = 0;
+    Object.values(conteos).forEach(v => Object.values(v).forEach(n => (t += n)));
+    return t;
+  }
+
+  async function mostrar(obra) {
+    const marco = $("marco");
+    marco.classList.add("saliendo");
+    await new Promise(r => setTimeout(r, 450));
+    marco.style.backgroundImage = `url("${obra.imagen}")`;
+    marco.setAttribute("aria-label", obra.nombre);
+    marco.classList.remove("saliendo");
+
+    const esSorpresa = obra.id === C.SORPRESA.id;
+    $("nombreObra").textContent = obra.nombre;
+    $("autor").textContent = obra.autor;
+    $("tipo").textContent = esSorpresa ? "Obra sorpresa · sin votos" : "Obra del recorrido";
+    $("tipo").classList.toggle("sorpresa", esSorpresa);
+
+    if (!esSorpresa) {
+      const v = conteos[obra.id] || {};
+      const total = Object.values(v).reduce((s, n) => s + n, 0);
+      $("num").textContent = total + (total === 1 ? " persona votó esta obra" : " personas votaron esta obra");
+      $("parecidos").hidden = true;
+      if (!total) {
+        pintarBarras({});
+        decir("Todavía no sé", "Nadie me enseñó esta obra. ¡Escaneá su QR en el recorrido!");
+        return;
+      }
+      const prob = {};
+      C.EMOCIONES.forEach(e => (prob[e.id] = (v[e.id] || 0) / total));
+      const gana = pintarBarras(prob);
+      // Cada tanto, el robot hace la pregunta crítica
+      if (vueltas % 2 === 0 && indice === 1) {
+        decir("¿Votaste distinto?", "Tu emoción también cuenta, pero yo aprendo lo que sintió la mayoría.");
+      } else {
+        decir(gana.frase, `Lo aprendí de ${total} personas que miraron esta obra.`);
+      }
+    } else {
+      $("num").textContent = "Nadie la etiquetó: el robot tiene que adivinar.";
+      const r = await Modelo.predecir(obra.imagen, C.EMOCIONES);
+      if (!r) { pintarBarras({}); decir("Todavía no sé", "Necesito que me enseñen con algunas obras primero."); return; }
+      const gana = pintarBarras(r.prob);
+      const top = r.vecinos.slice(0, 2);
+      $("parecidos").innerHTML = "Se parece a " + top.map(n =>
+        `<b>${n.obra.nombre}</b> (${Math.round(n.influencia * 100)} %)`).join(" y ");
+      $("parecidos").hidden = false;
+      decir(`Esta no la conozco… pero creo que ${gana.frase.toLowerCase()}`,
+            `Se parece a «${top[0].obra.nombre}». No lo siento: lo adivino por lo que me enseñaron.`, true);
+    }
+  }
+
+  async function siguiente() {
+    const s = secuencia();
+    indice = (indice + 1) % s.length;
+    if (indice === 0) vueltas++;
+    await mostrar(s[indice]);
+  }
+
+  async function actualizar(avisar) {
+    try {
+      const antes = totales();
+      conteos = await Datos.conteos();
+      const etiquetas = await Modelo.entrenar(C.OBRAS, conteos);
+      $("personas").textContent = totales();
+      $("etiquetas").textContent = etiquetas;
+      if (avisar && totales() > antes) mostrarAviso(`+${totales() - antes} etiqueta nueva · me volví a entrenar`);
+    } catch (e) {
+      console.warn("No se pudieron leer los votos", e);
+    }
+  }
+
+  let avisoTimer;
+  function mostrarAviso(texto) {
+    const a = $("aviso");
+    a.textContent = texto;
+    a.classList.add("visible");
+    clearTimeout(avisoTimer);
+    avisoTimer = setTimeout(() => a.classList.remove("visible"), 3500);
+  }
+
+  // Modo demo: visitantes simulados que votan según la tendencia de cada obra
+  function simularVisita() {
+    const obra = C.OBRAS[Math.floor(Math.random() * C.OBRAS.length)];
+    const v = conteos[obra.id] || {};
+    const total = Object.values(v).reduce((s, n) => s + n, 0) + C.EMOCIONES.length;
+    let r = Math.random() * total, elegida = C.EMOCIONES[0];
+    for (const e of C.EMOCIONES) { r -= (v[e.id] || 0) + 1; if (r <= 0) { elegida = e; break; } }
+    Datos.guardarLocal(obra.id, elegida.id);
+    actualizar(false).then(() =>
+      mostrarAviso(`Nuevo voto: ${elegida.nombre.toLowerCase()} para «${obra.nombre}»`));
+  }
+
+  async function iniciar() {
+    $("motor").textContent = "cargando…";
+    const motor = await Modelo.iniciar();
+    $("motor").textContent = motor === "MobileNet" ? "MobileNet + vecinos cercanos" : "colores + vecinos cercanos";
+    await actualizar(false);
+    await siguiente();
+    setInterval(siguiente, C.SEGUNDOS_POR_OBRA * 1000);
+    setInterval(() => actualizar(true), C.SEGUNDOS_ACTUALIZAR * 1000);
+    window.addEventListener("storage", e => { if (e.key === Datos.CLAVE) actualizar(true); });
+    if (!Datos.enLinea() && C.SIMULAR_VISITAS) setInterval(simularVisita, 11000);
+  }
+  iniciar();
+})();
+</script>
+
+</html>
