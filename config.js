@@ -7,7 +7,7 @@ window.CONFIG = {
   // URL de la aplicación web de Google Apps Script (ver apps-script/Codigo.gs).
   // Si queda vacía, el sistema funciona en MODO DEMO: los votos se guardan
   // en el navegador y sirven para probar votar.html y la pantalla en el mismo equipo.
-  APPS_SCRIPT_URL: "",
+    APPS_SCRIPT_URL: "https://script.google.com/macros/s/AKfycbxPd41TSr9MY8JWPTbCi8sDxdzrbN7iNScIJ4llCgaY5wfBugP6rngZ7z5t8hzSbiOM/exec",
 
   // En modo demo, simula visitantes votando para que la pantalla se vea "viva".
   SIMULAR_VISITAS: true,
