@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alegreya:wght@700;800&family=Atkinson+Hyperlegible:wght@400;700&family=Atkinson+Hyperlegible+Mono:wght@500&display=swap">
 <style>
-/* Página del QR: una columna para celular. Obra arriba, cuatro botones grandes, gracias. */
+/* Página del QR: inicio con las obras, votación con cuatro botones grandes, gracias. Una columna para celular. */
 :root {
   color-scheme: dark;
   --noche: #1a110a;
@@ -22,6 +22,7 @@
   --f-dato: "Atkinson Hyperlegible Mono", ui-monospace, monospace;
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 html { padding: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px); }
 body {
   margin: 0; min-height: 100%; background: var(--noche); color: var(--crema);
@@ -52,10 +53,23 @@ h1 { font-family: var(--f-titulo); font-weight: 800; font-size: 1.9rem; line-hei
 .gracias { background: var(--tarjeta); border: 1px solid var(--cobre); border-radius: 14px; padding: 1.2rem; display: grid; gap: .5rem; }
 .gracias h2 { font-family: var(--f-titulo); font-size: 1.6rem; margin: 0; }
 .gracias p { margin: 0; }
+.otra { margin-top: .4rem; font: 700 1rem var(--f-texto); color: var(--crema); background: transparent; border: 1px solid var(--cobre); border-radius: 10px; padding: .75rem 1rem; cursor: pointer; }
+.otra:focus-visible { outline: 3px solid var(--crema); outline-offset: 3px; }
 .error { color: #ffb3a1; margin: 0; }
-.lista { display: grid; gap: .6rem; }
-.lista a { color: var(--crema); background: var(--tarjeta); border: 1px solid var(--linea); border-radius: 12px; padding: .8rem 1rem; text-decoration: none; font-weight: 700; }
-.lista a:focus-visible { outline: 3px solid var(--cobre); }
+.lista { display: grid; gap: .7rem; }
+.lista button {
+  display: grid; grid-template-columns: 4.5rem 1fr auto; align-items: center; gap: .85rem;
+  width: 100%; text-align: left; color: var(--crema); background: var(--tarjeta);
+  border: 1px solid var(--linea); border-radius: 12px; padding: .55rem .8rem .55rem .55rem; cursor: pointer; font: inherit;
+}
+.lista button:focus-visible { outline: 3px solid var(--cobre); outline-offset: 2px; }
+.lista img { width: 4.5rem; height: 4.5rem; object-fit: cover; border-radius: 8px; display: block; }
+.lista .txt { display: grid; gap: .1rem; min-width: 0; }
+.lista .txt b { font-family: var(--f-titulo); font-style: italic; font-size: 1.15rem; line-height: 1.15; }
+.lista .txt span { color: var(--arena); font-size: .82rem; }
+.lista .estado { font: 500 .72rem var(--f-dato); letter-spacing: .08em; text-transform: uppercase; color: var(--cobre); white-space: nowrap; }
+.lista .estado.hecho { color: #8fd19b; }
+.secundario { font: 700 1rem var(--f-texto); color: var(--crema); background: transparent; border: 0; text-decoration: underline; text-underline-offset: 3px; padding: .3rem 0; cursor: pointer; justify-self: start; }
 </style>
 </head>
 <body>
@@ -64,6 +78,14 @@ h1 { font-family: var(--f-titulo); font-weight: 800; font-size: 1.9rem; line-hei
     <p class="antetitulo">Tierra de leyendas · Casupá</p>
     <h1>Enseñale al robot a sentir</h1>
   </header>
+
+  <section id="elegir" hidden>
+    <div style="display:grid;gap:.9rem">
+      <p class="pregunta">Elegí la obra que estás mirando</p>
+      <nav class="lista" id="lista" aria-label="Obras del recorrido"></nav>
+      <p class="letra">Votá todas las que quieras. Cada voto le enseña algo al robot.</p>
+    </div>
+  </section>
 
   <section id="votacion" hidden>
     <div style="display:grid;gap:1.1rem">
@@ -75,6 +97,7 @@ h1 { font-family: var(--f-titulo); font-weight: 800; font-size: 1.9rem; line-hei
       <div class="opciones" id="opciones"></div>
       <p class="error" id="error" hidden></p>
       <p class="letra">Tu voto es anónimo: solo se guarda la obra y la emoción que elegiste.</p>
+      <button type="button" class="secundario" id="volver">← Volver a las obras</button>
     </div>
   </section>
 
@@ -82,12 +105,10 @@ h1 { font-family: var(--f-titulo); font-weight: 800; font-size: 1.9rem; line-hei
     <h2>¡Gracias! El robot aprendió de vos</h2>
     <p id="resumen"></p>
     <p>Pasá por el stand para ver qué siente el robot con todo lo que le enseñaron.</p>
+    <button type="button" class="otra" id="otraObra">Votar otra obra</button>
+    <button type="button" class="secundario" id="otraPersona">Otra persona quiere votar con este celular</button>
   </section>
 
-  <section id="elegir" hidden>
-    <p class="pregunta" style="margin-bottom:.8rem">Elegí la obra que estás mirando</p>
-    <nav class="lista" id="lista"></nav>
-  </section>
 </main>
 
 <script src="config.js"></script>
@@ -96,33 +117,52 @@ h1 { font-family: var(--f-titulo); font-weight: 800; font-size: 1.9rem; line-hei
 (function () {
   const C = window.CONFIG;
   const $ = id => document.getElementById(id);
-  const id = new URLSearchParams(location.search).get("obra");
-  const obra = C.OBRAS.find(o => o.id === id);
+  const clave = id => "voto-obra-" + id;
+  const leerVoto = id => { try { return localStorage.getItem(clave(id)); } catch (e) { return null; } };
+  let obra = null;
 
-  if (!obra) {
-    C.OBRAS.forEach(o => {
-      const a = document.createElement("a");
-      a.href = "?obra=" + encodeURIComponent(o.id);
-      a.textContent = o.nombre;
-      $("lista").appendChild(a);
-    });
-    $("elegir").hidden = false;
-    return;
+  function mostrar(vista) {
+    ["elegir", "votacion", "gracias"].forEach(v => ($(v).hidden = v !== vista));
+    window.scrollTo(0, 0);
   }
 
-  const yaVoto = () => { try { return localStorage.getItem("voto-obra-" + obra.id); } catch (e) { return null; } };
+  // Pantalla de inicio: lista de obras
+  function inicio() {
+    $("lista").innerHTML = "";
+    C.OBRAS.forEach(o => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.id = "obra-" + o.id;
+      const votada = leerVoto(o.id);
+      b.innerHTML = `<img src="${o.imagen}" alt=""><span class="txt"><b></b><span></span></span>
+        <span class="estado ${votada ? "hecho" : ""}">${votada ? "✓ Votada" : "Votar"}</span>`;
+      b.querySelector("b").textContent = o.nombre;
+      b.querySelector(".txt span").textContent = o.autor;
+      b.addEventListener("click", () => abrir(o));
+      $("lista").appendChild(b);
+    });
+    mostrar("elegir");
+  }
+
+  // Pantalla de votación de una obra
+  function abrir(o) {
+    obra = o;
+    const ya = leerVoto(o.id);
+    if (ya) { agradecer(ya); return; }
+    $("img").src = o.imagen;
+    $("img").alt = o.nombre;
+    $("nombre").textContent = o.nombre;
+    $("autor").textContent = o.autor;
+    $("error").hidden = true;
+    document.querySelectorAll(".opciones button").forEach(x => (x.disabled = false));
+    mostrar("votacion");
+  }
+
   function agradecer(emocionId) {
     const e = C.EMOCIONES.find(x => x.id === emocionId);
     $("resumen").textContent = `Le enseñaste que «${obra.nombre}» da ${e ? e.nombre.toLowerCase() : "esa emoción"}.`;
-    $("votacion").hidden = true;
-    $("gracias").hidden = false;
+    mostrar("gracias");
   }
-  if (yaVoto()) { agradecer(yaVoto()); return; }
-
-  $("img").src = obra.imagen;
-  $("img").alt = obra.nombre;
-  $("nombre").textContent = obra.nombre;
-  $("autor").textContent = obra.autor;
 
   C.EMOCIONES.forEach(e => {
     const b = document.createElement("button");
@@ -135,7 +175,7 @@ h1 { font-family: var(--f-titulo); font-weight: 800; font-size: 1.9rem; line-hei
       $("error").hidden = true;
       try {
         await Datos.votar(obra.id, e.id);
-        try { localStorage.setItem("voto-obra-" + obra.id, e.id); } catch (err) {}
+        try { localStorage.setItem(clave(obra.id), e.id); } catch (err) {}
         agradecer(e.id);
       } catch (err) {
         $("error").textContent = "No se pudo enviar el voto. Revisá la conexión e intentá de nuevo.";
@@ -145,7 +185,19 @@ h1 { font-family: var(--f-titulo); font-weight: 800; font-size: 1.9rem; line-hei
     });
     $("opciones").appendChild(b);
   });
-  $("votacion").hidden = false;
+
+  $("volver").addEventListener("click", inicio);
+  $("otraObra").addEventListener("click", inicio);
+
+  // Celular compartido: olvida los votos de este celular y vuelve al inicio
+  $("otraPersona").addEventListener("click", () => {
+    C.OBRAS.forEach(o => { try { localStorage.removeItem(clave(o.id)); } catch (err) {} });
+    inicio();
+  });
+
+  // Un QR general abre el inicio; un QR con ?obra=N abre esa obra directamente
+  const pedida = C.OBRAS.find(o => o.id === new URLSearchParams(location.search).get("obra"));
+  if (pedida) abrir(pedida); else inicio();
 })();
 </script>
 </body>
