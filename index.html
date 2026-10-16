@@ -151,7 +151,7 @@ body {
   <div class="globo" id="globo">
     <p class="quien">El robot dice</p>
     <p class="dice" id="dice">Estoy aprendiendo…</p>
-    <p class="nota" id="nota">Cargando lo que votaron en el recorrido.</p>
+    <p class="nota" id="nota">Cargando lo que votaron en el stand.</p>
   </div>
 
   <figure class="obra" style="margin:0">
@@ -159,7 +159,7 @@ body {
   </figure>
 
   <aside class="ficha">
-    <span class="tipo" id="tipo">Obra del recorrido</span>
+    <span class="tipo" id="tipo">Obra votada</span>
     <h2 id="nombreObra">—</h2>
     <p class="autor" id="autor"></p>
     <p class="num" id="num"></p>
@@ -181,7 +181,7 @@ body {
     <button type="button" class="quitar" id="quitarSorpresas" hidden>Quitar las agregadas</button>
     <input type="file" id="archivoSorpresa" accept="image/*" hidden>
   </div>
-  <p class="invitacion">Escaneá el QR de cada obra del recorrido y enseñale al robot qué sentiste.</p>
+  <p class="invitacion">Votá en el puesto de votación y enseñale al robot qué sentiste con cada obra.</p>
 </main>
 
 <script src="config.js"></script>
@@ -255,7 +255,7 @@ body {
     const esSorpresa = !!obra.esSorpresa;
     $("nombreObra").textContent = obra.nombre;
     $("autor").textContent = obra.autor;
-    $("tipo").textContent = esSorpresa ? (obra.agregada ? "Obra sorpresa · agregada en el stand" : "Obra sorpresa · sin votos") : "Obra del recorrido";
+    $("tipo").textContent = esSorpresa ? (obra.agregada ? "Obra sorpresa · agregada en el stand" : "Obra sorpresa · sin votos") : "Obra votada";
     $("tipo").classList.toggle("sorpresa", esSorpresa);
 
     if (!esSorpresa) {
@@ -265,7 +265,7 @@ body {
       $("parecidos").hidden = true;
       if (!total) {
         pintarBarras({});
-        decir("Todavía no sé", "Nadie me enseñó esta obra. ¡Escaneá su QR en el recorrido!");
+        decir("Todavía no sé", "Nadie me enseñó esta obra. ¡Votala en el puesto de votación!");
         return;
       }
       const prob = {};
