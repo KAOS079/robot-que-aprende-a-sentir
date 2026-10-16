@@ -124,6 +124,16 @@ body {
 }
 .aviso.visible { opacity: 1; transform: none; }
 
+/* ---- Controles para agregar obras sorpresa ---- */
+.controles { left: 1.5%; top: 2.5%; display: flex; gap: .6cqw; flex-wrap: wrap; }
+.controles button {
+  font: 700 1cqw var(--f-texto); color: var(--crema); cursor: pointer;
+  background: rgba(20,13,8,.6); border: .1cqw solid var(--cobre); border-radius: .5cqw;
+  padding: .45cqw .9cqw;
+}
+.controles button:hover { background: rgba(217,135,74,.35); }
+.controles button:focus-visible { outline: .2cqw solid var(--crema); outline-offset: .15cqw; }
+.controles button.quitar { border-color: var(--linea); color: var(--arena); }
 .invitacion { left: 2%; max-width: 32%; bottom: 2.2%; font-size: .95cqw; color: var(--crema); background: rgba(20,13,8,.55); padding: .35cqw .8cqw; border-radius: .4cqw; }
 
 @media (prefers-reduced-motion: reduce) {
@@ -166,6 +176,11 @@ body {
   </section>
 
   <div class="aviso" id="aviso"></div>
+  <div class="controles">
+    <button type="button" id="agregarSorpresa">＋ Agregar obra sorpresa</button>
+    <button type="button" class="quitar" id="quitarSorpresas" hidden>Quitar las agregadas</button>
+    <input type="file" id="archivoSorpresa" accept="image/*" hidden>
+  </div>
   <p class="invitacion">Escaneá el QR de cada obra del recorrido y enseñale al robot qué sentiste.</p>
 </main>
 
@@ -179,7 +194,13 @@ body {
   let conteos = {};
   let indice = -1;
   let vueltas = 0;
-  const secuencia = () => [...C.OBRAS, C.SORPRESA];
+  // Obras sorpresa: las de config.js (SORPRESA o SORPRESAS) + las agregadas en el stand
+  const CLAVE_SORPRESAS = "robot-sorpresas-agregadas";
+  const fijas = (C.SORPRESAS || (C.SORPRESA ? [C.SORPRESA] : [])).map(o => ({ ...o, esSorpresa: true }));
+  let agregadas = [];
+  try { agregadas = JSON.parse(localStorage.getItem(CLAVE_SORPRESAS) || "[]"); } catch (e) { agregadas = []; }
+  agregadas.forEach(o => (o.esSorpresa = true));
+  const secuencia = () => [...C.OBRAS, ...fijas, ...agregadas];
 
   // Barras
   const filas = {};
@@ -231,10 +252,10 @@ body {
     marco.setAttribute("aria-label", obra.nombre);
     marco.classList.remove("saliendo");
 
-    const esSorpresa = obra.id === C.SORPRESA.id;
+    const esSorpresa = !!obra.esSorpresa;
     $("nombreObra").textContent = obra.nombre;
     $("autor").textContent = obra.autor;
-    $("tipo").textContent = esSorpresa ? "Obra sorpresa · sin votos" : "Obra del recorrido";
+    $("tipo").textContent = esSorpresa ? (obra.agregada ? "Obra sorpresa · agregada en el stand" : "Obra sorpresa · sin votos") : "Obra del recorrido";
     $("tipo").classList.toggle("sorpresa", esSorpresa);
 
     if (!esSorpresa) {
@@ -277,6 +298,78 @@ body {
     await mostrar(s[indice]);
   }
 
+  let rotacion;
+  function reiniciarRotacion() {
+    clearInterval(rotacion);
+    rotacion = setInterval(siguiente, C.SEGUNDOS_POR_OBRA * 1000);
+  }
+
+  // ---- Agregar obras sorpresa desde la pantalla ----
+  function guardarAgregadas() {
+    try {
+      localStorage.setItem(CLAVE_SORPRESAS, JSON.stringify(agregadas.map(({ esSorpresa, ...o }) => o)));
+      return true;
+    } catch (e) {
+      mostrarAviso("La foto se muestra, pero no se pudo guardar: se perderá al recargar");
+      return false;
+    }
+  }
+  function actualizarBotonQuitar() {
+    $("quitarSorpresas").hidden = agregadas.length === 0;
+    $("quitarSorpresas").textContent = `Quitar las agregadas (${agregadas.length})`;
+  }
+  // Achica la foto para que el navegador la guarde sin problemas
+  function achicar(archivo) {
+    return new Promise((ok, mal) => {
+      const lector = new FileReader();
+      lector.onerror = () => mal(new Error("No se pudo leer el archivo"));
+      lector.onload = () => {
+        const img = new Image();
+        img.onerror = () => mal(new Error("El archivo no es una imagen válida"));
+        img.onload = () => {
+          const lado = 900, k = Math.min(1, lado / Math.max(img.width, img.height));
+          const c = document.createElement("canvas");
+          c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+          c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+          ok(c.toDataURL("image/jpeg", 0.85));
+        };
+        img.src = lector.result;
+      };
+      lector.readAsDataURL(archivo);
+    });
+  }
+  $("agregarSorpresa").addEventListener("click", () => $("archivoSorpresa").click());
+  $("archivoSorpresa").addEventListener("change", async e => {
+    const archivo = e.target.files[0];
+    e.target.value = "";
+    if (!archivo) return;
+    try {
+      const imagen = await achicar(archivo);
+      const nombre = archivo.name.replace(/\.[^.]+$/, "").replace(/[-_]+/g, " ").trim() || "Obra nueva";
+      const obra = { id: "agregada-" + Date.now(), nombre, autor: "Agregada en el stand", imagen, esSorpresa: true, agregada: true };
+      agregadas.push(obra);
+      guardarAgregadas();
+      actualizarBotonQuitar();
+      // Mostrarla ya y que quede el tiempo completo en pantalla
+      indice = secuencia().findIndex(o => o.id === obra.id);
+      reiniciarRotacion();
+      await mostrar(obra);
+      mostrarAviso("Obra sorpresa agregada: el robot la está analizando");
+    } catch (err) {
+      mostrarAviso(err.message);
+    }
+  });
+  $("quitarSorpresas").addEventListener("click", () => {
+    agregadas = [];
+    try { localStorage.removeItem(CLAVE_SORPRESAS); } catch (e) {}
+    actualizarBotonQuitar();
+    indice = -1;
+    reiniciarRotacion();
+    siguiente();
+    mostrarAviso("Se quitaron las obras sorpresa agregadas");
+  });
+  actualizarBotonQuitar();
+
   async function actualizar(avisar) {
     try {
       const antes = totales();
@@ -317,7 +410,7 @@ body {
     $("motor").textContent = motor === "MobileNet" ? "MobileNet + vecinos cercanos" : "colores + vecinos cercanos";
     await actualizar(false);
     await siguiente();
-    setInterval(siguiente, C.SEGUNDOS_POR_OBRA * 1000);
+    reiniciarRotacion();
     setInterval(() => actualizar(true), C.SEGUNDOS_ACTUALIZAR * 1000);
     window.addEventListener("storage", e => { if (e.key === Datos.CLAVE) actualizar(true); });
     if (!Datos.enLinea() && C.SIMULAR_VISITAS) setInterval(simularVisita, 11000);
